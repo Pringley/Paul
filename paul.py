@@ -32,7 +32,7 @@ Example:
 
 """
 
-import os, socket, time, optparse, ConfigParser
+import os, socket, time, optparse, ConfigParser, shelve
 
 version = '%prog 0.0.1'
 usage = 'usage: %prog [options] channel1 channel2 ...'
@@ -43,6 +43,9 @@ defaults = {
     'port': 6667,
     'nick': 'paul'
 }
+
+# Open persistent container for user data.
+users = shelve.open('userdata')
 
 # Handle command-line arguments.
 parser = optparse.OptionParser(usage = usage, version = version)
@@ -183,6 +186,11 @@ while True:
             # Log it!
             write_log(channel, '{0} {1} joined {2}.'.format(timestamp(), sender,
                                                             channel))
+            # Add new users to our list.
+            if not sender in users.keys():
+                users[sender] = {'time':time.time(),'pmlogs':True}
+                # Send a message of greeting/explanation.
+                pass # (TODO)
 
         # Handle part events.
         elif 'PART' in data:
@@ -192,8 +200,15 @@ while True:
             # Log it!
             write_log(channel, '{0} {1} joined {2}.'.format(timestamp(), sender,
                                                             channel))
+            # Add new users to our list.
+            if not sender in users.keys():
+                users[sender] = {'time':time.time(),'pmlogs':True}
+            # Set leaving time (so we know what they missed).
+            else:
+                users[sender]['time'] = time.time()
 
 
 # Disconnect.
 irc.send('QUIT' + endl)
 irc.close()
+users.close()
